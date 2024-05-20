@@ -1,0 +1,55 @@
+name: Deploy to Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: "--max_old_space_size=8192"
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Set up Git user
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+    - name: Calculate New Tag
+      id: new_tag
+      run: |
+        git fetch --tags
+        LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+        if [ -z "$LATEST_TAG" ]; then
+          NEW_TAG="v1.0"
+        else
+          NEW_TAG=$(echo $LATEST_TAG | awk -F. -v OFS=. '{$NF++; print}')
+        fi
+        echo "Latest Tag: $LATEST_TAG"
+        echo "New Tag: $NEW_TAG"
+        echo "::set-output name=new_tag::$NEW_TAG"
+
+    - name: Checkout Main
+      run: |
+        git checkout main
+        git pull origin main
+
+    - name: Create and Push New Tag
+      env:
+        ACTIONS_PAT: ${{ secrets.ACTIONS_PAT }}
+      run: |
+        NEW_TAG=${{ steps.new_tag.outputs.new_tag }}
+        git tag -a $NEW_TAG -m "Production $NEW_TAG"
+        git push https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/${{ github.repository }} $NEW_TAG
+        echo "Pushed Tag: $NEW_TAG"
+
+    - name: Create Production
+      env:
+        ACTIONS_PAT: ${{ secrets.ACTIONS_PAT }}
+      run: |
+        NEW_TAG=${{ steps.new_tag.outputs.new_tag }}
+        git checkout -b production $NEW_TAG
+        git push https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/${{ github.repository }} production --force
