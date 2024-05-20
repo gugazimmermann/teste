@@ -2,6 +2,11 @@ name: Deploy to Production
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag for deployment (e.g., v1.2)'
+        required: true
+        default: 'v1.0'
 
 jobs:
   deploy:
@@ -13,6 +18,11 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v4
 
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
     - name: Set up Git user
       run: |
         git config --global user.name 'github-actions[bot]'
@@ -23,18 +33,15 @@ jobs:
         git checkout main
         git pull origin main
 
-    - name: Bump Version and Push Tag
-      id: tag_version
-      uses: mathieudutour/github-tag-action@v6.2
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create and Push New Tag
+      run: |
+        NEW_TAG=${{ github.event.inputs.tag }}
+        git tag -a $NEW_TAG -m "Production $NEW_TAG"
+        git push origin $NEW_TAG
+        echo "Pushed Tag: $NEW_TAG"
 
-    - name: New Tag
+    - name: Update Production Branch
       run: |
-        echo "New tag created: ${{ steps.tag_version.outputs.new_tag }}"
-      
-    - name: Push Production
-      run: |
-        NEW_TAG=$(echo ${{ steps.tag_version.outputs.new_tag }})
+        NEW_TAG=${{ github.event.inputs.tag }}
         git checkout -b production $NEW_TAG
         git push origin production --force
