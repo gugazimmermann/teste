@@ -2,6 +2,11 @@ name: Deploy to Production
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag for deployment (e.g., v1.2)'
+        required: true
+        default: 'v1.0'
 
 jobs:
   deploy:
@@ -23,31 +28,20 @@ jobs:
         git config --global user.name 'github-actions[bot]'
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
 
-    - name: Calculate New Tag
-      id: new_tag
-      run: |
-        git fetch --tags
-        LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
-        if [ -z "$LATEST_TAG" ]; then
-          NEW_TAG="v1.0"
-        else
-          NEW_TAG=$(echo $LATEST_TAG | awk -F. -v OFS=. '{$NF++; print}')
-        fi
-        echo "LATEST_TAG=$LATEST_TAG" >> $GITHUB_ENV
-        echo "NEW_TAG=$NEW_TAG" >> $GITHUB_ENV
-
     - name: Checkout Main
       run: |
         git checkout main
         git pull origin main
 
-    - name: Create New Tag
+    - name: Create and Push New Tag
       run: |
+        NEW_TAG=${{ github.event.inputs.tag }}
         git tag -a $NEW_TAG -m "Production $NEW_TAG"
         git push origin $NEW_TAG
         echo "Pushed Tag: $NEW_TAG"
 
-    - name: Create Production
+    - name: Create Production Branch
       run: |
+        NEW_TAG=${{ github.event.inputs.tag }}
         git checkout -b production $NEW_TAG
         git push origin production --force
