@@ -37,19 +37,15 @@ jobs:
         git checkout main
         git pull origin main
 
-    - name: Create and Push New Tag
-      env:
-        ACTIONS_PAT: ${{ secrets.ACTIONS_PAT }}
+    - name: Create New Tag
       run: |
         NEW_TAG=${{ steps.new_tag.outputs.new_tag }}
         git tag -a $NEW_TAG -m "Production $NEW_TAG"
-        git push https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/${{ github.repository }} $NEW_TAG
+        git push origin $NEW_TAG
         echo "Pushed Tag: $NEW_TAG"
 
     - name: Create Production
-      env:
-        ACTIONS_PAT: ${{ secrets.ACTIONS_PAT }}
       run: |
         NEW_TAG=${{ steps.new_tag.outputs.new_tag }}
         git checkout -b production $NEW_TAG
-        git push https://x-access-token:${{ secrets.ACTIONS_PAT }}@github.com/${{ github.repository }} production --force
+        git push origin production --force
