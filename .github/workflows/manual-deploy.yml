@@ -40,7 +40,7 @@ jobs:
         git push origin $NEW_TAG
         echo "Pushed Tag: $NEW_TAG"
 
-    - name: Create Production Branch
+    - name: Update Production Branch
       run: |
         NEW_TAG=${{ github.event.inputs.tag }}
         git checkout -b production $NEW_TAG
